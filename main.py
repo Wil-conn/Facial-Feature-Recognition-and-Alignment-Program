@@ -19,10 +19,9 @@ def get_photos(path):
     return images
 
 def main():
-    #mtcnn = MTCNN(factor = 0.709)
     print(sys.argv[1])
     path = 'images/'
-    fd = face_detect(0.709, get_photos(sys.argv[1]), 'eyes')
+    fd = face_detect(0.9, get_photos(sys.argv[1]), 'eyes')
     fd.detect()
     fd.display()
 
