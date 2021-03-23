@@ -1,6 +1,7 @@
 from facenet_pytorch import MTCNN
 import numpy as np
 import cv2 as cv
+import math
 import time
 
 BACKGROUND_DIMS = 500
@@ -31,7 +32,16 @@ class face_detect:
 
     def detect(self):
         for idx, image in np.ndenumerate(self.images):
+
+            gray = cv.cvtColor(~image, cv.COLOR_BGR2GRAY)
+            mask = cv.threshold(gray, 220, 255, cv.THRESH_BINARY)[1]
+
+            cv.imshow('mask', mask)
+            cv.imshow('gray', gray)
+
             boxes, probs, landmarks = self.mtcnn.detect(image, landmarks = True)
+
+            print(probs)
 
             #not entirely sure why idx is a tuple in the form (index , ).
             #using idx[0] fixes this by just getting the index number
@@ -44,8 +54,9 @@ class face_detect:
                 pass
             else:
                 #cv.circle(image, (50,50), 10, (255,0,0))
-                cv.circle(image, (landmarks[0][0][0], landmarks[0][0][1]), 5, (0, 255, 0))
-                cv.circle(image, (landmarks[0][1][0], landmarks[0][1][1]), 5, (0, 255, 0))
+                cv.circle(image, (landmarks[0][0][0], landmarks[0][0][1]), 3, (0, 255, 0))
+                cv.circle(image, (landmarks[0][1][0], landmarks[0][1][1]), 3, (0, 255, 0))
+                cv.putText(image, str(probs), (10,100), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv.LINE_AA)
 
         print(self.landmarks.get("0"))
         '''

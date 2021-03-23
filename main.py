@@ -20,8 +20,9 @@ def get_photos(path):
 
 def main():
     print(sys.argv[1])
-    path = 'images/'
-    fd = face_detect(0.9, get_photos(sys.argv[1]), 'eyes')
+    #img = cv.imread('images/face1.jpg')
+    fd = face_detect(0.7, get_photos(sys.argv[1]), 'eyes')
+    #fd = face_detect(0.7, arr, 'eyes')
     fd.detect()
     fd.display()
 
