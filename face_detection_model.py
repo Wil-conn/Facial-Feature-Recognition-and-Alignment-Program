@@ -51,7 +51,6 @@ class face_detect:
             cv.imshow('slideshow', img)
             k = cv.waitKey(500)
 
-            #idx += 1
 
 
 
