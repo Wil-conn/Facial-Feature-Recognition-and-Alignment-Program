@@ -66,6 +66,7 @@ class face_detect:
                 self.images = np.delete(self.images, idx[0])
                 pass
             else:
+                cv.rectangle(image, (boxes[0][0], boxes[0][1]), (boxes[0][2], boxes[0][3]), (0, 255, 0), thickness=1)
                 # Drawing circles on the eyes. just used for testing
                 cv.circle(image, (landmarks[0][0][0], landmarks[0][0][1]), 3, (0, 255, 0))
                 cv.circle(image, (landmarks[0][1][0], landmarks[0][1][1]), 3, (0, 255, 0))
@@ -75,7 +76,14 @@ class face_detect:
                 cv.circle(image, (landmarks[0][3][0], landmarks[0][3][1]), 3, (0, 255, 0))
                 cv.circle(image, (landmarks[0][4][0], landmarks[0][4][1]), 3, (0, 255, 0))
 
-                cv.putText(image, str(probs), (10,100), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv.LINE_AA)
+                eye_tilt_angle = self.get_angle_of_tilt((landmarks[0][0][0], landmarks[0][0][1]),
+                                                        (landmarks[0][1][0], landmarks[0][1][1]))
+
+                mouth_tile_angle = self.get_angle_of_tilt((landmarks[0][3][0], landmarks[0][3][1]),
+                                                        (landmarks[0][4][0], landmarks[0][4][1]))
+
+                cv.putText(image, str(eye_tilt_angle), (10, 100), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
+                cv.putText(image, str(mouth_tile_angle), (10, 300), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
 
         print(self.landmarks.get("0"))
         '''
@@ -84,6 +92,28 @@ class face_detect:
         '''
 
 #    def angle_of_eyes_tilt(left_eye_coord, right_eye_coord):
+
+    # computes the angle of tilt between 2 sets of coordinates. used for computer eye tilt and mouth tilt
+    def get_angle_of_tilt(self, left_coord, right_coord):
+        # to solve for the angle we need 2 sides, so we calculate the hypotenuse and the adjacent side from the angle
+        hype = math.sqrt((left_coord[0] - right_coord[0]) ** 2 + (left_coord[1] - right_coord[1]) ** 2)
+        adj = right_coord[0] - left_coord[0]
+
+        # if right eye's y is higher than the left's then we say it has an 'upwards' tilt
+        if left_coord[1] > right_coord[1]:
+            print("left eye y: " + str(left_coord[1]))
+            print("right eye y: " + str(right_coord[1]))
+            print("eyes have an 'upwards' angler")
+            angle = math.acos(adj/hype)
+            return (math.degrees(angle))
+
+        # if right eye's y is lower than left eye's y, it has a 'downwards' tilt
+        elif left_coord[1] < right_coord[1]:
+            print("left eye y: " + str(left_coord[1]))
+            print("right eye y: " + str(right_coord[1]))
+            print("eyes have an 'downwards' angler")
+            angle = math.acos(adj/hype)
+            return (math.degrees(angle))
 
     def display(self):
         idx = 0
