@@ -13,7 +13,8 @@ def get_photos(path):
     c = 0
     for entry in os.scandir(path):
         if entry.path.endswith(".jpg") and entry.is_file():
-            print(str(entry.path) + " is picture number " + str(c) + " in the images array")
+            print(str(entry.path) + " is picture number " + str(c) +
+                                    " in the images array")
             images[c] = cv.imread(str(entry.path))
             c += 1
     return images

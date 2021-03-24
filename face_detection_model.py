@@ -12,50 +12,69 @@ A note on landmarks array structure:
 left eye coordinates are accessed by creating a tuple consisting of: (landmarks[0][0][0] , landmarks[0][0][1])
 right eye coordinates are aceesed by creating a tuple consisting of: (landmarks[0][1][0] , landmarks[0][1][1]
 
+nose coordinates are accessed by creating a tuple consisting of: (landmarks[0][2][0], landmarks[0][2][1])
+
+right mouth coordinates are accessed by creating a tuple consisting of: (landmarks[0][3][0], landmarks[0][3][1])
+left mouth coordinates are accessed by creating a tuple consisting of: (landmarks[0][4][0], landmarks[0][4][1])
+
 '''
 
 
-#trackbar requires a callback function even though we aren't actually going to be using the callback function in the program so we create an empty callback function
+# trackbar requires a callback function even though we aren't actually going to
+# be using the callback function in the program so we create an empty callback function
 def nothing(x):
     pass
 
+
 class face_detect:
-    #f is the factor the MTCNN uses, images is a list of images we want to allign and mode is used to designate which facial feature we want to allign on
+    # f is the factor the MTCNN uses, images is a list of images we want
+    # to allign and mode is used to designate which facial feature
+    # we want to allign on
     def __init__(self, f, images, mode):
         self.mtcnn = MTCNN(factor = f)
         self.images = images
         self.mode = mode
 
-        #dictionary holding the landmarks (i.e eyes location, mouth location, nose location etc.) of every photo.
-        #to get the landmarks of the first photo, use key "0"
+        # dictionary holding the landmarks (i.e eyes location, mouth location,
+        # nose location etc.) of every photo.
+        # to get the landmarks of the first photo, use key "0"
         self.landmarks = {}
 
     def detect(self):
         for idx, image in np.ndenumerate(self.images):
 
-            gray = cv.cvtColor(~image, cv.COLOR_BGR2GRAY)
-            mask = cv.threshold(gray, 220, 255, cv.THRESH_BINARY)[1]
+            # gray and mask are for testing
+            # gray = cv.cvtColor(~image, cv.COLOR_BGR2GRAY)
+            # mask = cv.threshold(gray, 220, 255, cv.THRESH_BINARY)[1]
 
-            cv.imshow('mask', mask)
-            cv.imshow('gray', gray)
+            # for testing
+            # contours, hierarchy = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
+            # cv.drawContours(mask, contours, -1, (0, 255, 0), 2)
 
             boxes, probs, landmarks = self.mtcnn.detect(image, landmarks = True)
 
             print(probs)
 
-            #not entirely sure why idx is a tuple in the form (index , ).
-            #using idx[0] fixes this by just getting the index number
+            # not entirely sure why idx is a tuple in the form (index , ).
+            # using idx[0] fixes this by just getting the index number
             self.landmarks[str(idx[0])] = landmarks
 
-            #if we are not able to detect the features for a photo we update out images array to remove that photo and we
-            #continue to the next iteration
+            # if we are not able to detect the features for a photo we update
+            # out images array to remove that photo and we continue
+            # to the next iteration
             if boxes is None:
                 self.images = np.delete(self.images, idx[0])
                 pass
             else:
-                #cv.circle(image, (50,50), 10, (255,0,0))
+                # Drawing circles on the eyes. just used for testing
                 cv.circle(image, (landmarks[0][0][0], landmarks[0][0][1]), 3, (0, 255, 0))
                 cv.circle(image, (landmarks[0][1][0], landmarks[0][1][1]), 3, (0, 255, 0))
+                # Drawing circles on nose. just used for testing
+                cv.circle(image, (landmarks[0][2][0], landmarks[0][2][1]), 3, (0, 255, 0))
+                # Drawing circles on mouth. just used for testing
+                cv.circle(image, (landmarks[0][3][0], landmarks[0][3][1]), 3, (0, 255, 0))
+                cv.circle(image, (landmarks[0][4][0], landmarks[0][4][1]), 3, (0, 255, 0))
+
                 cv.putText(image, str(probs), (10,100), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv.LINE_AA)
 
         print(self.landmarks.get("0"))
@@ -71,7 +90,7 @@ class face_detect:
 
         cv.namedWindow('slideshow')
         trackbar_name = 'image # %d' % idx
-        cv.createTrackbar(trackbar_name, 'slideshow', 0, len(self.images), nothing)
+        cv.createTrackbar(trackbar_name, 'slideshow', 0, len(self.images)-1, nothing)
 
         while idx < len(self.images):
 
