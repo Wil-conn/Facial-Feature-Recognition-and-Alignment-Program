@@ -42,11 +42,11 @@ class face_detect:
 
         # dictionary holding mouth angle and direction of every photo.
         # to get the mouth info of the first photo, use key "0"
-        self.mouth = {}
+        self.mouth = []
 
-         # dictionary holding eye angle and direction of every photo.
+        # dictionary holding eye angle and direction of every photo.
         # to get the eye info of the first photo, use key "0"
-        self.eye = {}
+        self.eye = []
 
     def detect(self):
         for idx, image in np.ndenumerate(self.images):
@@ -72,6 +72,8 @@ class face_detect:
             # to the next iteration
             if boxes is None:
                 self.images = np.delete(self.images, idx[0])
+                #self.eye.append([0, -1, 0])
+                #self.mouth.append([0, -1, 0])
                 pass
             else:
                 cv.rectangle(image, (boxes[0][0], boxes[0][1]), (boxes[0][2], boxes[0][3]), (0, 255, 0), thickness=1)
@@ -84,15 +86,16 @@ class face_detect:
                 cv.circle(image, (landmarks[0][3][0], landmarks[0][3][1]), 3, (0, 255, 0))
                 cv.circle(image, (landmarks[0][4][0], landmarks[0][4][1]), 3, (0, 255, 0))
 
-                eye_tilt_angle, eye_tilt_dir = self.get_angle_of_tilt((landmarks[0][0][0], landmarks[0][0][1]),
+                eye_tilt_angle, eye_tilt_dir, eye_distance = self.get_angle_of_tilt((landmarks[0][0][0], landmarks[0][0][1]),
                                                         (landmarks[0][1][0], landmarks[0][1][1]))
 
-                mouth_tilt_angle, mouth_tilt_dir = self.get_angle_of_tilt((landmarks[0][3][0], landmarks[0][3][1]),
+                mouth_tilt_angle, mouth_tilt_dir, mouth_distance = self.get_angle_of_tilt((landmarks[0][3][0], landmarks[0][3][1]),
                                                         (landmarks[0][4][0], landmarks[0][4][1]))
 
-                self.eye[str(idx[0])] = [eye_tilt_angle, eye_tilt_dir]
-                self.mouth[str(idx[0])] = [mouth_tilt_angle, mouth_tilt_dir]
-                
+                self.eye.append([eye_tilt_angle, eye_tilt_dir, eye_distance])
+                self.mouth.append([mouth_tilt_angle, mouth_tilt_dir, mouth_distance])
+
+                cv.putText(image, str(eye_tilt_dir), (10, 80), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
                 cv.putText(image, str(eye_tilt_angle), (10, 100), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
                 cv.putText(image, str(mouth_tilt_angle), (10, 300), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
                 
@@ -109,14 +112,13 @@ class face_detect:
         # to solve for the angle we need 2 sides, so we calculate the hypotenuse and the adjacent side from the angle
         hype = math.sqrt((left_coord[0] - right_coord[0]) ** 2 + (left_coord[1] - right_coord[1]) ** 2)
         adj = right_coord[0] - left_coord[0]
-
         # if right eye's y is higher than the left's then we say it has an 'upwards' tilt, return 1
         if left_coord[1] > right_coord[1]:
             print("left eye y: " + str(left_coord[1]))
             print("right eye y: " + str(right_coord[1]))
             print("eyes have an 'upwards' angler")
             angle = math.acos(adj/hype)
-            return (math.degrees(angle), 1)
+            return (math.degrees(angle), 1, hype)
 
         # if right eye's y is lower than left eye's y, it has a 'downwards' tilt, return 0
         elif left_coord[1] < right_coord[1]:
@@ -124,7 +126,7 @@ class face_detect:
             print("right eye y: " + str(right_coord[1]))
             print("eyes have an 'downwards' angler")
             angle = math.acos(adj/hype)
-            return (math.degrees(angle), 0)
+            return (math.degrees(angle), 0, hype)
 
     def display(self):
         idx = 0
@@ -133,6 +135,10 @@ class face_detect:
         cv.createTrackbar(trackbar_name, 'slideshow', 0, len(self.images)-1, nothing)
         cv.createTrackbar('Align Eye', 'slideshow', 0, 1, nothing)
         cv.createTrackbar('Align Mouth', 'slideshow', 0, 1, nothing)
+        
+        #calculate the average distance between eyes/mouth for scaling
+        avg_eye_dist = self.get_avg_dist(self.eye)
+        avg_mouth_dist = self.get_avg_dist(self.mouth)
         
         while idx < len(self.images):
             
@@ -155,14 +161,16 @@ class face_detect:
             #if the image didnt pass the box check in detect then it will not have rotation angle information and will result in error.
             #trackbar used as bool, 1=on, if both on, nothing done
             if cv.getTrackbarPos('Align Eye', 'slideshow') == 1 and cv.getTrackbarPos('Align Mouth', 'slideshow') == 0:
-                if str(cv.getTrackbarPos(trackbar_name, 'slideshow')) in self.eye:
-                    background = self.rotate(background, self.eye[str(cv.getTrackbarPos(trackbar_name, 'slideshow'))][0], self.eye[str(cv.getTrackbarPos(trackbar_name, 'slideshow'))][1])
+                if self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][1] >= 0:
+                    background = self.rotate(background, self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][0], self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][1])
+                    background = self.scale(background, self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][2], avg_eye_dist)
                 else:
                     cv.putText(background, 'no angle key', (10, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
                 cv.putText(background, 'Eye Aligned', (10, 450), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
             elif cv.getTrackbarPos('Align Mouth', 'slideshow') == 1 and cv.getTrackbarPos('Align Eye', 'slideshow') == 0:
-                if str(cv.getTrackbarPos(trackbar_name, 'slideshow')) in self.mouth:
-                    background = self.rotate(background, self.mouth[str(cv.getTrackbarPos(trackbar_name, 'slideshow'))][0], self.mouth[str(cv.getTrackbarPos(trackbar_name, 'slideshow'))][1])
+                if self.mouth[cv.getTrackbarPos(trackbar_name, 'slideshow')][1] >= 0:
+                    background = self.rotate(background, self.mouth[cv.getTrackbarPos(trackbar_name, 'slideshow')][0], self.mouth[cv.getTrackbarPos(trackbar_name, 'slideshow')][1])
+                    background = self.scale(background, self.mouth[cv.getTrackbarPos(trackbar_name, 'slideshow')][2], avg_mouth_dist)
                 else:
                     cv.putText(background, 'no angle key', (10, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
                 cv.putText(background, 'Mouth Aligned', (10, 450), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
@@ -176,14 +184,30 @@ class face_detect:
             cv.imshow('slideshow', background)
             k = cv.waitKey(500)
 
-    def rotate(self, image, angle, dir):
+    def rotate(self, image, angle, direction):
         rotated = np.copy(image)
-        if dir == 1:
-            angle = angle*-1
-        rotation = cv.getRotationMatrix2D((rotated.shape[1]/2,rotated.shape[0]/2), angle, 1)
-        rotated = cv.warpAffine(rotated, rotation, (rotated.shape[1],rotated.shape[0]))
+        if direction >= 0:
+            if direction == 1:
+                angle = angle*-1
+            rotation = cv.getRotationMatrix2D((rotated.shape[1]/2,rotated.shape[0]/2), angle, 1)
+            rotated = cv.warpAffine(rotated, rotation, (rotated.shape[1],rotated.shape[0]))
         return rotated
-
+    
+    #just returns the original image for now
+    def scale(self, image, dist, avg):
+        if(dist > 0.0):
+            scale_val = avg/dist
+            scaled = cv.resize(image, None, fx=scale_val, fy=scale_val, interpolation=cv.INTER_CUBIC)
+        return image
+    
+    def get_avg_dist(self, feature):
+        total = 0.0
+        count = 0
+        for value in feature:
+            if value[2] > 0:
+                total += value[2]
+                count += 1
+        return total/count
 
 
 
