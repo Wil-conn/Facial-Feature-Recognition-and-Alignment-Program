@@ -40,6 +40,14 @@ class face_detect:
         # to get the landmarks of the first photo, use key "0"
         self.landmarks = {}
 
+        # dictionary holding mouth angle and direction of every photo.
+        # to get the mouth info of the first photo, use key "0"
+        self.mouth = {}
+
+         # dictionary holding eye angle and direction of every photo.
+        # to get the eye info of the first photo, use key "0"
+        self.eye = {}
+
     def detect(self):
         for idx, image in np.ndenumerate(self.images):
 
@@ -76,15 +84,18 @@ class face_detect:
                 cv.circle(image, (landmarks[0][3][0], landmarks[0][3][1]), 3, (0, 255, 0))
                 cv.circle(image, (landmarks[0][4][0], landmarks[0][4][1]), 3, (0, 255, 0))
 
-                eye_tilt_angle = self.get_angle_of_tilt((landmarks[0][0][0], landmarks[0][0][1]),
+                eye_tilt_angle, eye_tilt_dir = self.get_angle_of_tilt((landmarks[0][0][0], landmarks[0][0][1]),
                                                         (landmarks[0][1][0], landmarks[0][1][1]))
 
-                mouth_tile_angle = self.get_angle_of_tilt((landmarks[0][3][0], landmarks[0][3][1]),
+                mouth_tilt_angle, mouth_tilt_dir = self.get_angle_of_tilt((landmarks[0][3][0], landmarks[0][3][1]),
                                                         (landmarks[0][4][0], landmarks[0][4][1]))
 
+                self.eye[str(idx[0])] = [eye_tilt_angle, eye_tilt_dir]
+                self.mouth[str(idx[0])] = [mouth_tilt_angle, mouth_tilt_dir]
+                
                 cv.putText(image, str(eye_tilt_angle), (10, 100), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
-                cv.putText(image, str(mouth_tile_angle), (10, 300), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
-
+                cv.putText(image, str(mouth_tilt_angle), (10, 300), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
+                
         print(self.landmarks.get("0"))
         '''
         if self.mode == 'eyes':
@@ -99,31 +110,32 @@ class face_detect:
         hype = math.sqrt((left_coord[0] - right_coord[0]) ** 2 + (left_coord[1] - right_coord[1]) ** 2)
         adj = right_coord[0] - left_coord[0]
 
-        # if right eye's y is higher than the left's then we say it has an 'upwards' tilt
+        # if right eye's y is higher than the left's then we say it has an 'upwards' tilt, return 1
         if left_coord[1] > right_coord[1]:
             print("left eye y: " + str(left_coord[1]))
             print("right eye y: " + str(right_coord[1]))
             print("eyes have an 'upwards' angler")
             angle = math.acos(adj/hype)
-            return (math.degrees(angle))
+            return (math.degrees(angle), 1)
 
-        # if right eye's y is lower than left eye's y, it has a 'downwards' tilt
+        # if right eye's y is lower than left eye's y, it has a 'downwards' tilt, return 0
         elif left_coord[1] < right_coord[1]:
             print("left eye y: " + str(left_coord[1]))
             print("right eye y: " + str(right_coord[1]))
             print("eyes have an 'downwards' angler")
             angle = math.acos(adj/hype)
-            return (math.degrees(angle))
+            return (math.degrees(angle), 0)
 
     def display(self):
         idx = 0
-
         cv.namedWindow('slideshow')
         trackbar_name = 'image # %d' % idx
         cv.createTrackbar(trackbar_name, 'slideshow', 0, len(self.images)-1, nothing)
-
+        cv.createTrackbar('Align Eye', 'slideshow', 0, 1, nothing)
+        cv.createTrackbar('Align Mouth', 'slideshow', 0, 1, nothing)
+        
         while idx < len(self.images):
-
+            
             #we will be placing the image on top of a black background of a fixed size
             #we do this because not all the images have the same dimensions and that causes problems with the trackbar
             #doing this will also make life 100x easier when we begin applying our transformations on the photos
@@ -131,7 +143,7 @@ class face_detect:
 
             #uses the value of our trackbar to get that photo and place it on screen
             img = self.images[cv.getTrackbarPos(trackbar_name, 'slideshow')]
-
+            
             #gets the offset so that we place our photos in the center of the background image
             x_offset = int((BACKGROUND_DIMS - img.shape[1])/2)
             y_offset = int((BACKGROUND_DIMS - img.shape[0])/2)
@@ -139,13 +151,38 @@ class face_detect:
             #places the image on the background
             background[y_offset: y_offset + img.shape[0], x_offset: x_offset + img.shape[1]] = img
 
-
+            #rotates image so eyes/mouth are level
+            #if the image didnt pass the box check in detect then it will not have rotation angle information and will result in error.
+            #trackbar used as bool, 1=on, if both on, nothing done
+            if cv.getTrackbarPos('Align Eye', 'slideshow') == 1 and cv.getTrackbarPos('Align Mouth', 'slideshow') == 0:
+                if str(cv.getTrackbarPos(trackbar_name, 'slideshow')) in self.eye:
+                    background = self.rotate(background, self.eye[str(cv.getTrackbarPos(trackbar_name, 'slideshow'))][0], self.eye[str(cv.getTrackbarPos(trackbar_name, 'slideshow'))][1])
+                else:
+                    cv.putText(background, 'no angle key', (10, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
+                cv.putText(background, 'Eye Aligned', (10, 450), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
+            elif cv.getTrackbarPos('Align Mouth', 'slideshow') == 1 and cv.getTrackbarPos('Align Eye', 'slideshow') == 0:
+                if str(cv.getTrackbarPos(trackbar_name, 'slideshow')) in self.mouth:
+                    background = self.rotate(background, self.mouth[str(cv.getTrackbarPos(trackbar_name, 'slideshow'))][0], self.mouth[str(cv.getTrackbarPos(trackbar_name, 'slideshow'))][1])
+                else:
+                    cv.putText(background, 'no angle key', (10, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
+                cv.putText(background, 'Mouth Aligned', (10, 450), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
+            else:
+                cv.putText(background, 'Non Aligned', (10, 450), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
+            
             height = 600
             #dim = (int(height/self.images[idx].shape[0] * self.images[idx].shape[1]), height)
             #img = cv.resize(self.images[idx], dim)
             #cv.imshow('image', self.images[idx])
             cv.imshow('slideshow', background)
             k = cv.waitKey(500)
+
+    def rotate(self, image, angle, dir):
+        rotated = np.copy(image)
+        if dir == 1:
+            angle = angle*-1
+        rotation = cv.getRotationMatrix2D((rotated.shape[1]/2,rotated.shape[0]/2), angle, 1)
+        rotated = cv.warpAffine(rotated, rotation, (rotated.shape[1],rotated.shape[0]))
+        return rotated
 
 
 
