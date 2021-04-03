@@ -98,7 +98,7 @@ class face_detect:
                 cv.putText(image, str(eye_tilt_dir), (10, 80), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
                 cv.putText(image, str(eye_tilt_angle), (10, 100), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
                 cv.putText(image, str(mouth_tilt_angle), (10, 300), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
-                
+
         print(self.landmarks.get("0"))
         '''
         if self.mode == 'eyes':
@@ -135,13 +135,13 @@ class face_detect:
         cv.createTrackbar(trackbar_name, 'slideshow', 0, len(self.images)-1, nothing)
         cv.createTrackbar('Align Eye', 'slideshow', 0, 1, nothing)
         cv.createTrackbar('Align Mouth', 'slideshow', 0, 1, nothing)
-        
+
         #calculate the average distance between eyes/mouth for scaling
         avg_eye_dist = self.get_avg_dist(self.eye)
         avg_mouth_dist = self.get_avg_dist(self.mouth)
-        
+
         while idx < len(self.images):
-            
+
             #we will be placing the image on top of a black background of a fixed size
             #we do this because not all the images have the same dimensions and that causes problems with the trackbar
             #doing this will also make life 100x easier when we begin applying our transformations on the photos
@@ -149,7 +149,7 @@ class face_detect:
 
             #uses the value of our trackbar to get that photo and place it on screen
             img = self.images[cv.getTrackbarPos(trackbar_name, 'slideshow')]
-            
+
             #gets the offset so that we place our photos in the center of the background image
             x_offset = int((BACKGROUND_DIMS - img.shape[1])/2)
             y_offset = int((BACKGROUND_DIMS - img.shape[0])/2)
@@ -176,7 +176,7 @@ class face_detect:
                 cv.putText(background, 'Mouth Aligned', (10, 450), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
             else:
                 cv.putText(background, 'Non Aligned', (10, 450), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
-            
+
             height = 600
             #dim = (int(height/self.images[idx].shape[0] * self.images[idx].shape[1]), height)
             #img = cv.resize(self.images[idx], dim)
@@ -192,14 +192,14 @@ class face_detect:
             rotation = cv.getRotationMatrix2D((rotated.shape[1]/2,rotated.shape[0]/2), angle, 1)
             rotated = cv.warpAffine(rotated, rotation, (rotated.shape[1],rotated.shape[0]))
         return rotated
-    
+
     #just returns the original image for now
     def scale(self, image, dist, avg):
         if(dist > 0.0):
             scale_val = avg/dist
             scaled = cv.resize(image, None, fx=scale_val, fy=scale_val, interpolation=cv.INTER_CUBIC)
         return image
-    
+
     def get_avg_dist(self, feature):
         total = 0.0
         count = 0
