@@ -32,6 +32,7 @@ class user_interface(tkinter.Frame):
         nose_button = tkinter.Radiobutton(self, text="nose", variable=var, value="nose", command=sel).grid(row=1, column=0)
         mouth_button = tkinter.Radiobutton(self, text="mouth", variable=var, value="mouth", command=sel).grid(row=1, column=1)
         eyes_button = tkinter.Radiobutton(self, text="eyes", variable=var, value="eyes", command=sel).grid(row=1, column=2)
+        all_button = tkinter.Radiobutton(self, text="all", variable=var, value="all",command=sel).grid(row=1, column=3)
         run_button = tkinter.Button(self, text="run", command=run).grid(row=4, column=1)
         dir_button = tkinter.Button(self, text="choose a directory of photos", command=choose_dir).grid(row=2, column=1)
 

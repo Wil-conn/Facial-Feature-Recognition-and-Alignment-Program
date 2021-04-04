@@ -28,7 +28,7 @@ def main():
     ui = user_interface(master=root)
     ui.mainloop()
     root.destroy()
-    fd = face_detect(0.7, get_photos(ui.dir_location), 'eyes')
+    fd = face_detect(0.7, get_photos(ui.dir_location), ui.selection)
     #fd = face_detect(0.7, arr, 'eyes')
     fd.detect()
     fd.display()

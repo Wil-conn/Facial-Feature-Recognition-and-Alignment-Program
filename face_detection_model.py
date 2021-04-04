@@ -69,7 +69,7 @@ class face_detect:
             # using idx[0] fixes this by just getting the index number
             if type(landmarks) is np.ndarray:
                 self.landmarks.append(landmarks)
-            
+
 
             # if we are not able to detect the features for a photo we update
             # out images array to remove that photo and we continue
@@ -104,7 +104,7 @@ class face_detect:
                 cv.putText(image, str(landmarks[0][0][0]), (10, 80), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
                 cv.putText(image, str(eye_tilt_angle), (10, 100), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
                 cv.putText(image, str(mouth_tilt_angle), (10, 300), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
-                
+
         print(self.landmarks[0])
         '''
         if self.mode == 'eyes':
@@ -139,10 +139,6 @@ class face_detect:
         cv.namedWindow('slideshow')
         trackbar_name = 'image # %d' % idx
         cv.createTrackbar(trackbar_name, 'slideshow', 0, len(self.images)-1, nothing)
-        cv.createTrackbar('Align Eye', 'slideshow', 0, 1, nothing)
-        cv.createTrackbar('Align Mouth', 'slideshow', 0, 1, nothing)
-        cv.createTrackbar('Align Nose', 'slideshow', 0, 1, nothing)
-        cv.createTrackbar('Align All', 'slideshow', 0, 1, nothing)
 
         #calculate the average distance between eyes/mouth for scaling
         avg_eye_dist = self.get_avg_dist(self.eye)
@@ -150,7 +146,7 @@ class face_detect:
         avg_eye_loc = self.get_avg_loc(self.landmarks, 0)#left eye
         avg_nose_loc = self.get_avg_loc(self.landmarks, 2)#nose
         avg_mouth_loc = self.get_avg_loc(self.landmarks, 3)#left mouth
-        
+
         avg_arr = self.get_avg_pts(self.landmarks)
         #print(avg_arr)
         while idx < len(self.images):
@@ -162,45 +158,48 @@ class face_detect:
 
             #uses the value of our trackbar to get that photo and place it on screen
             img = self.images[cv.getTrackbarPos(trackbar_name, 'slideshow')]
-            
+
             #gets the offset so that we place our photos in the center of the background image
             x_offset = int((BACKGROUND_DIMS - img.shape[1])/2)
             y_offset = int((BACKGROUND_DIMS - img.shape[0])/2)
-            
+
             cv.circle(img, (int(avg_nose_loc[0]), int(avg_nose_loc[1])), 3, (0, 0, 255))
-            if cv.getTrackbarPos('Align Eye', 'slideshow') == 1 and cv.getTrackbarPos('Align Mouth', 'slideshow') == 0 and cv.getTrackbarPos('Align Nose', 'slideshow') == 0 and cv.getTrackbarPos('Align All', 'slideshow') == 0:
+            print("MODE " + str(self.mode))
+            if self.mode == "eyes":
                 if self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][1] >= 0:
                     img = self.rotate(img, self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][0], self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][1])
                     img = self.scale(img, self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][2], avg_eye_dist)
                 else:
                     cv.putText(img, 'no angle key', (10, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
                 cv.putText(img, 'Eye Aligned', (10, 450), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
-            elif cv.getTrackbarPos('Align Mouth', 'slideshow') == 1 and cv.getTrackbarPos('Align Eye', 'slideshow') == 0 and cv.getTrackbarPos('Align Nose', 'slideshow') == 0 and cv.getTrackbarPos('Align All', 'slideshow') == 0:
+
+            elif self.mode == "mouth":
                 if self.mouth[cv.getTrackbarPos(trackbar_name, 'slideshow')][1] >= 0:
                     img = self.rotate(img, self.mouth[cv.getTrackbarPos(trackbar_name, 'slideshow')][0], self.mouth[cv.getTrackbarPos(trackbar_name, 'slideshow')][1])
                     img = self.scale(img, self.mouth[cv.getTrackbarPos(trackbar_name, 'slideshow')][2], avg_mouth_dist)
                 else:
                     cv.putText(img, 'no angle key', (10, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
                 cv.putText(img, 'Mouth Aligned', (10, 450), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
-            elif cv.getTrackbarPos('Align Mouth', 'slideshow') == 0 and cv.getTrackbarPos('Align Eye', 'slideshow') == 0 and cv.getTrackbarPos('Align Nose', 'slideshow') == 1 and cv.getTrackbarPos('Align All', 'slideshow') == 0:
-                
+
+            elif self.mode == "nose":
                 img = self.translation(img, [self.nose[cv.getTrackbarPos(trackbar_name, 'slideshow')][0], self.nose[cv.getTrackbarPos(trackbar_name, 'slideshow')][0]], avg_nose_loc)
-            elif cv.getTrackbarPos('Align Mouth', 'slideshow') == 0 and cv.getTrackbarPos('Align Eye', 'slideshow') == 0 and cv.getTrackbarPos('Align Nose', 'slideshow') == 0 and cv.getTrackbarPos('Align All', 'slideshow') == 1:
+
+            elif self.mode == "all":
                 if type(self.landmarks[cv.getTrackbarPos(trackbar_name, 'slideshow')]) is np.ndarray:
                     img = self.align(img, np.float32(self.landmarks[cv.getTrackbarPos(trackbar_name, 'slideshow')][0]), avg_arr)
                 else:
                     print(cv.getTrackbarPos(trackbar_name, 'slideshow'))
                 cv.putText(img, 'All Aligned', (10, 450), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
+
             else:
                 cv.putText(img, 'Non Aligned', (10, 450), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
-            #places the image on the background
-                
+
             background[y_offset: y_offset + img.shape[0], x_offset: x_offset + img.shape[1]] = img
-            
+
             #rotates image so eyes/mouth are level
             #if the image didnt pass the box check in detect then it will not have rotation angle information and will result in error.
             #trackbar used as bool, 1=on, if both on, nothing done
-            
+
             height = 600
             #dim = (int(height/self.images[idx].shape[0] * self.images[idx].shape[1]), height)
             #img = cv.resize(self.images[idx], dim)
@@ -217,7 +216,7 @@ class face_detect:
             rotation = cv.getRotationMatrix2D((rotated.shape[1]/2,rotated.shape[0]/2), angle, 1)
             rotated = cv.warpAffine(rotated, rotation, (rotated.shape[1],rotated.shape[0]))
         return rotated
-    
+
     #just returns the original image for now
     def scale(self, image, dist, avg):
         if(dist > 0.0):
@@ -256,10 +255,10 @@ class face_detect:
         #print(homography)
         #warp the image
         warped = cv.warpPerspective(image, homography,(image.shape[1],image.shape[0]))
-        
-        
+
+
         return warped
-    
+
     def get_avg_dist(self, feature):
         total = 0.0
         count = 0
@@ -335,5 +334,5 @@ class face_detect:
 
 
 
-                
+
 
