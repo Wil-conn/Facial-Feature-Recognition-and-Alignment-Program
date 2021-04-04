@@ -3,7 +3,9 @@ import cv2 as cv
 import numpy as np
 import os
 import sys
+import tkinter
 from face_detection_model import *
+from user_interface import *
 
 def get_photos(path):
     path, dirs, files = next(os.walk(path))
@@ -20,9 +22,13 @@ def get_photos(path):
     return images
 
 def main():
-    print(sys.argv[1])
+    #print(sys.argv[1])
     #img = cv.imread('images/face1.jpg')
-    fd = face_detect(0.7, get_photos(sys.argv[1]), 'eyes')
+    root = tkinter.Tk()
+    ui = user_interface(master=root)
+    ui.mainloop()
+    root.destroy()
+    fd = face_detect(0.7, get_photos(ui.dir_location), 'eyes')
     #fd = face_detect(0.7, arr, 'eyes')
     fd.detect()
     fd.display()
