@@ -51,7 +51,9 @@ class face_detect:
         self.nose = []
 
     def detect(self):
-        for idx, image in np.ndenumerate(self.images):
+        #for idx, image in np.ndenumerate(self.images):
+        idx = 0
+        for image in self.images:
 
             # gray and mask are for testing
             # gray = cv.cvtColor(~image, cv.COLOR_BGR2GRAY)
@@ -62,8 +64,8 @@ class face_detect:
             # cv.drawContours(mask, contours, -1, (0, 255, 0), 2)
 
             boxes, probs, landmarks = self.mtcnn.detect(image, landmarks = True)
-            print('land')
-            print(landmarks)
+            #print('land')
+            #print(landmarks)
 
             # not entirely sure why idx is a tuple in the form (index , ).
             # using idx[0] fixes this by just getting the index number
@@ -75,11 +77,13 @@ class face_detect:
             # out images array to remove that photo and we continue
             # to the next iteration
             if boxes is None:
-                self.images = np.delete(self.images, idx[0])
+                print("IMAGE NUMBER " + str(idx) + " SHOULD BE DELETED")
+                self.images = np.delete(self.images, idx)
+                idx -= 1
                 #self.eye.append([0, -1, 0])
                 #self.mouth.append([0, -1, 0])
-                self.nose.append([-1, -1])
-                pass
+                #self.nose.append([-1, -1])
+                #pass
             else:
                 cv.rectangle(image, (boxes[0][0], boxes[0][1]), (boxes[0][2], boxes[0][3]), (0, 255, 0), thickness=1)
                 # Drawing circles on the eyes. just used for testing
@@ -104,8 +108,9 @@ class face_detect:
                 cv.putText(image, str(landmarks[0][0][0]), (10, 80), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
                 cv.putText(image, str(eye_tilt_angle), (10, 100), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
                 cv.putText(image, str(mouth_tilt_angle), (10, 300), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
+            idx += 1
 
-        print(self.landmarks[0])
+        #print(self.landmarks[0])
         '''
         if self.mode == 'eyes':
             angle_of_eyes_tilt
@@ -120,17 +125,17 @@ class face_detect:
         adj = right_coord[0] - left_coord[0]
         # if right eye's y is higher than the left's then we say it has an 'upwards' tilt, return 1
         if left_coord[1] > right_coord[1]:
-            print("left eye y: " + str(left_coord[1]))
-            print("right eye y: " + str(right_coord[1]))
-            print("eyes have an 'upwards' angler")
+            #print("left eye y: " + str(left_coord[1]))
+            #print("right eye y: " + str(right_coord[1]))
+            #print("eyes have an 'upwards' angler")
             angle = math.acos(adj/hype)
             return (math.degrees(angle), 1, hype)
 
         # if right eye's y is lower than left eye's y, it has a 'downwards' tilt, return 0
         elif left_coord[1] < right_coord[1]:
-            print("left eye y: " + str(left_coord[1]))
-            print("right eye y: " + str(right_coord[1]))
-            print("eyes have an 'downwards' angler")
+            #print("left eye y: " + str(left_coord[1]))
+            #print("right eye y: " + str(right_coord[1]))
+            #print("eyes have an 'downwards' angler")
             angle = math.acos(adj/hype)
             return (math.degrees(angle), 0, hype)
 
@@ -162,9 +167,8 @@ class face_detect:
             #gets the offset so that we place our photos in the center of the background image
             x_offset = int((BACKGROUND_DIMS - img.shape[1])/2)
             y_offset = int((BACKGROUND_DIMS - img.shape[0])/2)
-
             cv.circle(img, (int(avg_nose_loc[0]), int(avg_nose_loc[1])), 3, (0, 0, 255))
-            print("MODE " + str(self.mode))
+            #print("MODE " + str(self.mode))
             if self.mode == "eyes":
                 if self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][1] >= 0:
                     img = self.rotate(img, self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][0], self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][1])
@@ -209,7 +213,7 @@ class face_detect:
 
     def rotate(self, image, angle, direction):
         rotated = np.copy(image)
-        print(dir)
+        #print(dir)
         if direction >= 0:
             if direction == 1:
                 angle = angle*-1
@@ -221,6 +225,7 @@ class face_detect:
     def scale(self, image, dist, avg):
         if(dist > 0.0):
             scale_val = avg/dist
+            '''
             print('here')
             print(image.shape[1])
             print(image.shape[0])
@@ -228,28 +233,35 @@ class face_detect:
             print(scale_val)
             print(dist)
             print(dist*scale_val)
+            '''
             scaled = cv.resize(image, None, fx=scale_val, fy=scale_val, interpolation=cv.INTER_CUBIC)
         return scaled
 
     def translation(self, img, loc, avg_loc):
         h, w = img.shape[:2]
+        '''
         print(h)
         print(w)
         print(loc)
         print(avg_loc)
+        '''
         x_shift = loc[0] - avg_loc[0]
         y_shift = loc[1] - avg_loc[1]
         cv.circle(img, (int(loc[0]+x_shift), int(loc[1]+y_shift)), 3, (255, 0, 0))
         T = np.float32([[1, 0, x_shift], [0, 1, y_shift]])
         translated = cv.warpAffine(img, T, (w, h))
+        '''
         print(x_shift)
         print(y_shift)
+        '''
         return translated
 
     def align(self, image, lm, avg):
+        '''
         print('here')
         print(lm)
         print(avg)
+        '''
 
         homography, mask = cv.findHomography(lm, avg, cv.RANSAC)
         #print(homography)
