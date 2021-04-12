@@ -100,9 +100,15 @@ class face_detect:
 
                 mouth_tilt_angle, mouth_tilt_dir, mouth_distance = self.get_angle_of_tilt((landmarks[0][3][0], landmarks[0][3][1]),
                                                         (landmarks[0][4][0], landmarks[0][4][1]))
-
-                self.eye.append([eye_tilt_angle, eye_tilt_dir, eye_distance, [landmarks[0][0][0], landmarks[0][0][1]]])
-                self.mouth.append([mouth_tilt_angle, mouth_tilt_dir, mouth_distance, [landmarks[0][3][0], landmarks[0][3][1]]])
+                #get midpoints of eyes and mouth
+                eye_mid = self.get_mid_point(landmarks[0][0], landmarks[0][1])
+                mouth_mid = self.get_mid_point(landmarks[0][3], landmarks[0][4])
+                #print('eye mid')
+                #print(eye_mid)
+                cv.circle(image, (int(eye_mid[0]), int(eye_mid[1])), 3, (0, 0, 255))
+                cv.circle(image, (int(mouth_mid[0]), int(mouth_mid[1])), 3, (0, 0, 255))
+                self.eye.append([eye_tilt_angle, eye_tilt_dir, eye_distance, eye_mid])
+                self.mouth.append([mouth_tilt_angle, mouth_tilt_dir, mouth_distance, mouth_mid])
                 self.nose.append([landmarks[0][2][0], landmarks[0][2][1]])
 
                 cv.putText(image, str(landmarks[0][0][0]), (10, 80), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
@@ -148,9 +154,10 @@ class face_detect:
         #calculate the average distance between eyes/mouth for scaling
         avg_eye_dist = self.get_avg_dist(self.eye)
         avg_mouth_dist = self.get_avg_dist(self.mouth)
-        avg_eye_loc = self.get_avg_loc(self.landmarks, 0)#left eye
+        avg_eye_mid = self.get_avg_mid(self.eye)#left eye
         avg_nose_loc = self.get_avg_loc(self.landmarks, 2)#nose
-        avg_mouth_loc = self.get_avg_loc(self.landmarks, 3)#left mouth
+        avg_mouth_mid = self.get_avg_mid(self.mouth)#left mouth
+        max_img_size = self.get_max_size(self.images, self.eye, self.mouth, avg_eye_dist, avg_mouth_dist)
 
         avg_arr = self.get_avg_pts(self.landmarks)
         #print(avg_arr)
@@ -167,39 +174,46 @@ class face_detect:
             #gets the offset so that we place our photos in the center of the background image
             x_offset = int((BACKGROUND_DIMS - img.shape[1])/2)
             y_offset = int((BACKGROUND_DIMS - img.shape[0])/2)
-            cv.circle(img, (int(avg_nose_loc[0]), int(avg_nose_loc[1])), 3, (0, 0, 255))
+            cv.circle(img, (int(avg_eye_mid[0]), int(avg_eye_mid[1])), 3, (255, 0, 0))
+            cv.circle(img, (int(avg_mouth_mid[0]), int(avg_mouth_mid[1])), 3, (255, 0, 0))
             #print("MODE " + str(self.mode))
+            scale_val = [1, 1]
             if self.mode == "eyes":
                 if self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][1] >= 0:
-                    img = self.rotate(img, self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][0], self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][1])
-                    img = self.scale(img, self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][2], avg_eye_dist)
+                    
+                    img, scale_val = self.scale(img, self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][2], avg_eye_dist, self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][3], avg_eye_mid, max_img_size[0])
+                    img = self.translation(img, self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][3], avg_eye_mid, max_img_size[1], scale_val)
+                    img = self.rotate(img, self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][0], self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][1], self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][3])
                 else:
                     cv.putText(img, 'no angle key', (10, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
                 cv.putText(img, 'Eye Aligned', (10, 450), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
 
             elif self.mode == "mouth":
                 if self.mouth[cv.getTrackbarPos(trackbar_name, 'slideshow')][1] >= 0:
-                    img = self.rotate(img, self.mouth[cv.getTrackbarPos(trackbar_name, 'slideshow')][0], self.mouth[cv.getTrackbarPos(trackbar_name, 'slideshow')][1])
-                    img = self.scale(img, self.mouth[cv.getTrackbarPos(trackbar_name, 'slideshow')][2], avg_mouth_dist)
+                    
+                    img, scale_val = self.scale(img, self.mouth[cv.getTrackbarPos(trackbar_name, 'slideshow')][2], avg_mouth_dist, self.mouth[cv.getTrackbarPos(trackbar_name, 'slideshow')][3], avg_mouth_mid, max_img_size[0])
+                    img = self.translation(img, self.mouth[cv.getTrackbarPos(trackbar_name, 'slideshow')][3], avg_mouth_mid, max_img_size[2], scale_val)
+                    img = self.rotate(img, self.mouth[cv.getTrackbarPos(trackbar_name, 'slideshow')][0], self.mouth[cv.getTrackbarPos(trackbar_name, 'slideshow')][1], self.mouth[cv.getTrackbarPos(trackbar_name, 'slideshow')][3])
+
                 else:
                     cv.putText(img, 'no angle key', (10, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
                 cv.putText(img, 'Mouth Aligned', (10, 450), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
 
             elif self.mode == "nose":
-                img = self.translation(img, [self.nose[cv.getTrackbarPos(trackbar_name, 'slideshow')][0], self.nose[cv.getTrackbarPos(trackbar_name, 'slideshow')][0]], avg_nose_loc)
+                img = self.translation(img, [self.nose[cv.getTrackbarPos(trackbar_name, 'slideshow')][0], self.nose[cv.getTrackbarPos(trackbar_name, 'slideshow')][1]], avg_nose_loc, max_img_size[0], [0, 0])
 
             elif self.mode == "all":
                 if type(self.landmarks[cv.getTrackbarPos(trackbar_name, 'slideshow')]) is np.ndarray:
-                    img = self.align(img, np.float32(self.landmarks[cv.getTrackbarPos(trackbar_name, 'slideshow')][0]), avg_arr)
+                    img = self.align(img, np.float32(self.landmarks[cv.getTrackbarPos(trackbar_name, 'slideshow')][0]), avg_arr, max_img_size[0])
                 else:
-                    print(cv.getTrackbarPos(trackbar_name, 'slideshow'))
+                    pass
+                    #print(cv.getTrackbarPos(trackbar_name, 'slideshow'))
                 cv.putText(img, 'All Aligned', (10, 450), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
 
             else:
                 cv.putText(img, 'Non Aligned', (10, 450), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
 
             background[y_offset: y_offset + img.shape[0], x_offset: x_offset + img.shape[1]] = img
-
             #rotates image so eyes/mouth are level
             #if the image didnt pass the box check in detect then it will not have rotation angle information and will result in error.
             #trackbar used as bool, 1=on, if both on, nothing done
@@ -211,59 +225,80 @@ class face_detect:
             cv.imshow('slideshow', background)
             k = cv.waitKey(500)
 
-    def rotate(self, image, angle, direction):
+    def rotate(self, image, angle, direction, mid):
         rotated = np.copy(image)
-        #print(dir)
+        #print(mid)
+        #print((rotated.shape[1]/2,rotated.shape[0]/2))
         if direction >= 0:
             if direction == 1:
                 angle = angle*-1
-            rotation = cv.getRotationMatrix2D((rotated.shape[1]/2,rotated.shape[0]/2), angle, 1)
+            rotation = cv.getRotationMatrix2D((mid[0], mid[1]), angle, 1)
             rotated = cv.warpAffine(rotated, rotation, (rotated.shape[1],rotated.shape[0]))
         return rotated
 
     #just returns the original image for now
-    def scale(self, image, dist, avg):
+    def scale(self, image, dist, avg, mid_point, avg_mid, max_size):
         if(dist > 0.0):
             scale_val = avg/dist
-            '''
-            print('here')
-            print(image.shape[1])
+            
+            print('scale')
+            '''print(image.shape[1])
             print(image.shape[0])
             print(avg)
             print(scale_val)
             print(dist)
-            print(dist*scale_val)
-            '''
+            print(dist*scale_val)'''
+            
+            #if len(mid_point) > 0:
+            h, w = image.shape[:2]
+            
             scaled = cv.resize(image, None, fx=scale_val, fy=scale_val, interpolation=cv.INTER_CUBIC)
-        return scaled
-
-    def translation(self, img, loc, avg_loc):
+            h2, w2 = scaled.shape[:2]
+            print(h)
+            print(h2)
+            print(h*scale_val)
+            #return np.float32(sc), quadrants
+            return scaled, [w2-w, h2-h]
+        else:
+            return img, 1
+    
+    def translation(self, img, loc, avg_loc, max_size, scale_dif):
         h, w = img.shape[:2]
-        '''
+        print('tran')
         print(h)
         print(w)
         print(loc)
         print(avg_loc)
-        '''
-        x_shift = loc[0] - avg_loc[0]
-        y_shift = loc[1] - avg_loc[1]
-        cv.circle(img, (int(loc[0]+x_shift), int(loc[1]+y_shift)), 3, (255, 0, 0))
+        print(scale_dif)
+        print(max_size)
+        x_shift = avg_loc[0] - loc[0] - ((max_size[0] - w)/2) - scale_dif[0]
+        y_shift = avg_loc[1] - loc[1] - ((max_size[1] - h)/2) - scale_dif[1]
+        #cv.circle(img, (int(loc[0]+x_shift), int(loc[1]+y_shift)), 3, (255, 0, 0))
         T = np.float32([[1, 0, x_shift], [0, 1, y_shift]])
         translated = cv.warpAffine(img, T, (w, h))
-        '''
-        print(x_shift)
-        print(y_shift)
-        '''
+        
+        #print(x_shift)
+        #print(y_shift)
+        
         return translated
 
-    def align(self, image, lm, avg):
-        '''
+    def align(self, image, lm, avg, max_size):
+        h, w = image.shape[:2]
+        x_dif = ((max_size[0] - w)/2)
+        y_dif = ((max_size[1] - h)/2)
         print('here')
         print(lm)
         print(avg)
-        '''
+        print(x_dif)
+        print(y_dif)
+        avg_dif = []
+        for pt in avg:
+            print(pt)
+            avg_dif.append([pt[0]-x_dif, pt[1]-y_dif])
+        print(avg_dif)   
+        avg_dif = np.float32(avg_dif)
 
-        homography, mask = cv.findHomography(lm, avg, cv.RANSAC)
+        homography, mask = cv.findHomography(lm, avg_dif, cv.RANSAC)
         #print(homography)
         #warp the image
         warped = cv.warpPerspective(image, homography,(image.shape[1],image.shape[0]))
@@ -281,7 +316,7 @@ class face_detect:
         return total/count
 
     def get_avg_loc(self, lm, feature):
-        print(self.landmarks)
+        #print(self.landmarks)
         avg = []
         x_tot = 0.0
         y_tot = 0.0
@@ -295,9 +330,32 @@ class face_detect:
                 count += 1
         avg = [x_tot/count, y_tot/count]
         return avg
+    
+    def get_mid_point(self, left, right):
+        return [(left[0]+right[0])/2, (left[1]+right[1])/2]
+    
+    def get_avg_mid(self, lm):
+        
+        #print('midpoints')
+        #print(lm)
+        avg = []
+        x_tot = 0.0
+        y_tot = 0.0
+        count = 0
+        for val in lm:
+            print(type(val))
+            if type(val) is list:
+                x_tot += val[3][0]
+                y_tot += val[3][1]
+                count += 1
+                print(count)
+        avg = [x_tot/count, y_tot/count]
+        print(avg)
+        return avg
+    
     def get_avg_pts(self, lm):
-        print('len')
-        print(len(self.landmarks))
+        #print('len')
+        #print(len(self.landmarks))
         lex_tot = 0.0
         rex_tot = 0.0
         nx_tot = 0.0
@@ -330,8 +388,33 @@ class face_detect:
         avg_rm = [rmx_tot/count, rmy_tot/count]
         return np.float32([avg_le, avg_re, avg_n, avg_lm, avg_rm])
 
-    def back(*args):
-        pass
+    def get_max_size(self, images, eyes, mouths, edst, mdst):
+        x_max = 0
+        y_max = 0
+        ex_max = 0
+        ey_max = 0
+        mx_max = 0
+        my_max = 0
+        count = 0
+        for img in images:
+            print(img)
+            h, w = img.shape[:2]
+            if h > y_max:
+                y_max = h
+            if w > x_max:
+                x_max = w
+            e_val = edst/self.eye[count][2]
+            m_val = mdst/self.mouth[count][2]
+            if h*e_val > ey_max:
+                ey_max = h*e_val
+            if w*e_val > ex_max:
+                ex_max = w*e_val
+            if h*m_val > my_max:
+                my_max = h*m_val
+            if w*m_val > mx_max:
+                mx_max = w*m_val
+            count += 1
+        return [[x_max, y_max], [ex_max, ey_max], [mx_max, my_max]]
 
 
 
