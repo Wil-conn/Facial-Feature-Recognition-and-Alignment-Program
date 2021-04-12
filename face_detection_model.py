@@ -163,7 +163,7 @@ class face_detect:
         avg_nose_loc = self.get_avg_loc(self.landmarks, 2)#nose
         avg_mouth_mid = self.get_avg_mid(self.mouth)#left mouth
         max_img_size = self.get_max_size(self.images, self.eye, self.mouth, avg_eye_dist, avg_mouth_dist)
-
+        max_dim = [0, 0]
         avg_arr = self.get_avg_pts(self.landmarks)
         #print(avg_arr)
         for i in range (len(self.images)):
@@ -182,13 +182,13 @@ class face_detect:
             cv.circle(img, (int(avg_eye_mid[0]), int(avg_eye_mid[1])), 3, (255, 0, 0))
             cv.circle(img, (int(avg_mouth_mid[0]), int(avg_mouth_mid[1])), 3, (255, 0, 0))
             #print("MODE " + str(self.mode))
-            scale_val = [1, 1]
+            scale_val = 0
             if self.mode == "eyes":
                 if self.eye[i][1] >= 0:
-
-                    img, scale_val = self.scale(img, self.eye[i][2], avg_eye_dist, self.eye[i][3], avg_eye_mid, max_img_size[0])
-                    img = self.translation(img, self.eye[i][3], avg_eye_mid, max_img_size[1], scale_val)
                     img = self.rotate(img, self.eye[i][0], self.eye[i][1], self.eye[i][3])
+                    img, scale_val = self.scale(img, self.eye[i][2], avg_eye_dist, self.eye[i][3], avg_eye_mid, max_img_size[0])
+                    img = self.translation(img, self.eye[i][3], avg_eye_mid, max_img_size[0], scale_val)
+                    max_dim = self.max_size(img, max_dim)
                     #self.transformed[cv.getTrackbarPos(trackbar_name, 'slideshow')]
                 else:
                     cv.putText(img, 'no angle key', (10, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
@@ -196,17 +196,17 @@ class face_detect:
 
             elif self.mode == "mouth":
                 if self.mouth[i][1] >= 0:
-
-                    img, scale_val = self.scale(img, self.mouth[i][2], avg_mouth_dist, self.mouth[i][3], avg_mouth_mid, max_img_size[0])
-                    img = self.translation(img, self.mouth[i][3], avg_mouth_mid, max_img_size[2], scale_val)
                     img = self.rotate(img, self.mouth[i][0], self.mouth[i][1], self.mouth[i][3])
+                    img, scale_val = self.scale(img, self.mouth[i][2], avg_mouth_dist, self.mouth[i][3], avg_mouth_mid, max_img_size[0])
+                    img = self.translation(img, self.mouth[i][3], avg_mouth_mid, max_img_size[0], scale_val)
+                    
 
                 else:
                     cv.putText(img, 'no angle key', (10, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
                 cv.putText(img, 'Mouth Aligned', (10, 450), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
 
             elif self.mode == "nose":
-                img = self.translation(img, [self.nose[i][0], self.nose[i][1]], avg_nose_loc, max_img_size[0], [0, 0])
+                img = self.translation(img, [self.nose[i][0], self.nose[i][1]], avg_nose_loc, max_img_size[0], 0)
 
             elif self.mode == "all":
                 if type(self.landmarks[i]) is np.ndarray:
@@ -249,17 +249,19 @@ class face_detect:
             cv.circle(img, (int(avg_mouth_mid[0]), int(avg_mouth_mid[1])), 3, (255, 0, 0))
             #print("MODE " + str(self.mode))
             scale_val = [1, 1]
+            
+            img = background = self.transformed[cv.getTrackbarPos(trackbar_name, 'slideshow')]
             if self.mode == "eyes":
                 if self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][1] >= 0:
 
-                    img, scale_val = self.scale(img, self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][2], avg_eye_dist, self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][3], avg_eye_mid, max_img_size[0])
-                    img = self.translation(img, self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][3], avg_eye_mid, max_img_size[1], scale_val)
-                    img = self.rotate(img, self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][0], self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][1], self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][3])
+                    #img, scale_val = self.scale(img, self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][2], avg_eye_dist, self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][3], avg_eye_mid, max_img_size[0])
+                    img = self.translation(img, self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][3], avg_eye_mid, max_dim, scale_val)
+                    #img = self.rotate(img, self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][0], self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][1], self.eye[cv.getTrackbarPos(trackbar_name, 'slideshow')][3])
                     #self.transformed[cv.getTrackbarPos(trackbar_name, 'slideshow')]
                 else:
                     cv.putText(img, 'no angle key', (10, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
                 cv.putText(img, 'Eye Aligned', (10, 450), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv.LINE_AA)
-
+            
             elif self.mode == "mouth":
                 if self.mouth[cv.getTrackbarPos(trackbar_name, 'slideshow')][1] >= 0:
 
@@ -334,22 +336,30 @@ class face_detect:
             print(h2)
             print(h*scale_val)
             #return np.float32(sc), quadrants
-            return scaled, [w2-w, h2-h]
+            return scaled, scale_val
         else:
             return img, 1
 
-    def translation(self, img, loc, avg_loc, max_size, scale_dif):
+    def translation(self, img, loc, avg_loc, max_size, scale_val):
         h, w = img.shape[:2]
         print('tran')
         print(h)
         print(w)
         print(loc)
         print(avg_loc)
-        print(scale_dif)
+        print(scale_val)
         print(max_size)
-        x_shift = avg_loc[0] - loc[0] - ((max_size[0] - w)/2) - scale_dif[0]
-        y_shift = avg_loc[1] - loc[1] - ((max_size[1] - h)/2) - scale_dif[1]
-        #cv.circle(img, (int(loc[0]+x_shift), int(loc[1]+y_shift)), 3, (255, 0, 0))
+        x_shift = avg_loc[0] - loc[0] - ((max_size[0] - w)/2)
+        y_shift = avg_loc[1] - loc[1] - ((max_size[1] - h)/2)
+        if scale_val > 0:
+            x_shift = avg_loc[0] - (loc[0]*scale_val) - ((max_size[0]*scale_val - w)/(2*scale_val))
+            y_shift = avg_loc[1] - (loc[1]*scale_val) - ((max_size[1]*scale_val - h)/(2*scale_val))
+        
+        '''if scale_dif[0] > 0:
+            _, _, lms = self.mtcnn.detect(img, landmarks = True)
+            print('s')
+            print(lms)
+            cv.circle(img, (int(loc[0]+x_shift), int(loc[1]+y_shift)), 3, (255, 255, 0))'''
         T = np.float32([[1, 0, x_shift], [0, 1, y_shift]])
         translated = cv.warpAffine(img, T, (w, h))
 
@@ -493,8 +503,19 @@ class face_detect:
         return [[x_max, y_max], [ex_max, ey_max], [mx_max, my_max]]
 
 
+    def max_size(self, img, dim):
+        h, w = img.shape[:2]        
+        ret_dim = []
+        if w > dim[0]:
+            ret_dim.append(w)
+        else:
+            ret_dim.append(dim[0])
+        if h > dim[1]:
+            ret_dim.append(h)
+        else:
+            ret_dim.append(dim[1])
 
-
+        return ret_dim
 
 
 
