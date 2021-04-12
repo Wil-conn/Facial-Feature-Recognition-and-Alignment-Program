@@ -32,7 +32,18 @@ def main():
     #fd = face_detect(0.7, arr, 'eyes')
     fd.detect()
     fd.display()
-
+    video = cv.VideoWriter("output.avi", cv.VideoWriter_fourcc(*'XVID'), 18, (600,600))
+    for image in fd.transformed:
+        background = np.zeros((600, 600, 3), np.uint8)
+        x_offset = int((BACKGROUND_DIMS - image.shape[1])/2)
+        y_offset = int((BACKGROUND_DIMS - image.shape[0])/2)
+        background[y_offset: y_offset + image.shape[0], x_offset: x_offset + image.shape[1]] = image
+        video.write(background)
+    '''
+    for image in fd.images:
+        cv.imshow('test', image)
+        k = cv.waitKey(500)
+    '''
     #faces = detect(img, mtcnn)
     #cv.imshow('image', faces)
     #print(fd.landmarks)
