@@ -81,16 +81,6 @@ class face_detect:
                 self.transformed = np.delete(self.transformed, idx)
                 idx -= 1
             else:
-                cv.rectangle(image, (boxes[0][0], boxes[0][1]), (boxes[0][2], boxes[0][3]), (0, 255, 0), thickness=1)
-                # Drawing circles on the eyes. just used for testing
-                cv.circle(image, (landmarks[0][0][0], landmarks[0][0][1]), 3, (0, 255, 0))
-                cv.circle(image, (landmarks[0][1][0], landmarks[0][1][1]), 3, (0, 255, 0))
-                # Drawing circles on nose. just used for testing
-                cv.circle(image, (landmarks[0][2][0], landmarks[0][2][1]), 3, (0, 255, 0))
-                # Drawing circles on mouth. just used for testing
-                cv.circle(image, (landmarks[0][3][0], landmarks[0][3][1]), 3, (0, 255, 0))
-                cv.circle(image, (landmarks[0][4][0], landmarks[0][4][1]), 3, (0, 255, 0))
-
                 eye_tilt_angle, eye_tilt_dir, eye_distance = self.get_angle_of_tilt((landmarks[0][0][0], landmarks[0][0][1]),
                                                         (landmarks[0][1][0], landmarks[0][1][1]))
 
@@ -155,20 +145,29 @@ class face_detect:
 
             if self.mode == "eyes":
                 if self.eye[i][1] >= 0:
+                    cv.circle(img, (int(self.landmarks[i][0][0][0]), int(self.landmarks[i][0][0][1])), 3, (0, 255, 0))
+                    cv.circle(img, (self.landmarks[i][0][1][0], self.landmarks[i][0][1][1]), 3, (0, 255, 0))
                     cv.circle(img, (int(self.eye[i][3][0]), int(self.eye[i][3][1])), 3, (0, 0, 255))
                     img = self.rotate(img, self.eye[i][0], self.eye[i][1], self.eye[i][3])#rotate image at midpoint of eyes so eyes are even 
                     img, scale_val = self.scale(img, self.eye[i][2], avg_eye_dist, self.eye[i][3], avg_eye_mid)#scale image so distance between eyes are the same
                     img = self.translation(img, self.eye[i][3], avg_eye_mid, max_img_size, scale_val)#move image so eye midpoints are the same
             elif self.mode == "mouth":
                 if self.mouth[i][1] >= 0:
+                    cv.circle(img, (int(self.landmarks[i][0][3][0]), int(self.landmarks[i][0][3][1])), 3, (0, 255, 0))
+                    cv.circle(img, (self.landmarks[i][0][4][0], self.landmarks[i][0][4][1]), 3, (0, 255, 0))
                     cv.circle(img, (int(self.mouth[i][3][0]), int(self.mouth[i][3][1])), 3, (0, 0, 255))
                     img = self.rotate(img, self.mouth[i][0], self.mouth[i][1], self.mouth[i][3])#rotate image at mouth midpoint so mouth is even 
                     img, scale_val = self.scale(img, self.mouth[i][2], avg_mouth_dist, self.mouth[i][3], avg_mouth_mid)#scale image so distance between mouth corners are the same
                     img = self.translation(img, self.mouth[i][3], avg_mouth_mid, max_img_size, scale_val)#move image so mouth midpoints are the same
             elif self.mode == "nose":
+                cv.circle(img, (self.landmarks[i][0][2][0], self.landmarks[i][0][2][1]), 3, (0, 255, 0))                
                 img = self.translation(img, [self.nose[i][0], self.nose[i][1]], avg_nose_loc, max_img_size, 0)#move image so nose locations are the same
             elif self.mode == "all":
                 if type(self.landmarks[i]) is np.ndarray:
+                    cv.circle(img, (int(self.landmarks[i][0][0][0]), int(self.landmarks[i][0][0][1])), 3, (0, 255, 0))
+                    cv.circle(img, (self.landmarks[i][0][1][0], self.landmarks[i][0][1][1]), 3, (0, 255, 0))
+                    cv.circle(img, (int(self.landmarks[i][0][3][0]), int(self.landmarks[i][0][3][1])), 3, (0, 255, 0))
+                    cv.circle(img, (self.landmarks[i][0][4][0], self.landmarks[i][0][4][1]), 3, (0, 255, 0))
                     img = self.align(img, np.float32(self.landmarks[i][0]), avg_arr, max_img_size)#homography so point locations are the same
 
             background[y_offset: y_offset + img.shape[0], x_offset: x_offset + img.shape[1]] = img
